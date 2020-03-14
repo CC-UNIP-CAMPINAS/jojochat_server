@@ -3,10 +3,12 @@ package app;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Main extends Thread {
 	public Socket conexao;
+	public static ArrayList<Socket> clients = new ArrayList<>();
 
 	public Main(Socket aConexao) {
 		this.conexao = aConexao;
@@ -22,6 +24,10 @@ public class Main extends Thread {
 			System.out.println("Nova conexão com o cliente " + cliente.getInetAddress().getHostAddress());
 			Thread t = new Main(cliente);
 			t.start();
+			clients.add(cliente);
+			for (Socket cli : clients) {
+				System.out.println("Clientes conectados: " + cli.getInetAddress().getHostAddress());
+			}
 		}
 		servidor.close();
 	}
