@@ -38,10 +38,13 @@ public class Main {
 			System.out.println(e.getMessage());
 		}
 	}
+
 	public static void clienteBroadcast() throws IOException {
 		for (ClientHandler cliente : clientesConectados) {
 			cliente.objOuts.writeObject(usuariosAtivos);
 		}
+		
+		
 	}
 }
 
@@ -60,21 +63,33 @@ class ClientHandler implements Runnable {
 
 	@Override
 	public void run() {
-		
+
 		String mensagem;
 		while (true) {
 			try {
 				if (!this.cliente.isClosed()) {
 					Main.clienteBroadcast();
 
+					for (ClientHandler cliente : Main.clientesConectados) {
+						
+						System.out.println(cliente);
+					}
+					
 					Object recebido = objIns.readObject();
 					if (recebido instanceof String) {
-					mensagem = (String) recebido;
-					System.out.println(mensagem);
+						mensagem = (String) recebido;
+						System.out.println(mensagem);
 					}
 				}
 			} catch (EOFException | SocketException e) {
 				System.out.println("Usuário desconectado: " + this.nome);
+				Main.clientesConectados.remove(this);
+				Main.usuariosAtivos.remove(this.nome);
+				try {
+					Main.clienteBroadcast();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 			} catch (ClassNotFoundException ex) {
 				System.out.println("Tipo de objeto não esperado");
 			} catch (IOException ex) {
@@ -90,4 +105,3 @@ class ClientHandler implements Runnable {
 		}
 	}
 }
-	
