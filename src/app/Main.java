@@ -13,7 +13,7 @@ import entities.Connection;
 
 public class Main {
 	public static Vector<ClientHandler> clientesConectados = new Vector<>();
-	static ArrayList<String> usuariosAtivos = new ArrayList<>();
+	static Vector<String> usuariosAtivos = new Vector<>();
 
 	static int i = 0;
 
@@ -28,9 +28,14 @@ public class Main {
 
 				ClientHandler cHandler = new ClientHandler(cliente, "cliente " + i, objIns, objOuts);
 				Thread t = new Thread(cHandler);
-				clientesConectados.add(cHandler);
-				usuariosAtivos.add(cHandler.nome);
+				synchronized (clientesConectados) {
+					clientesConectados.add(cHandler);
+				}
+				synchronized (usuariosAtivos) {
+					usuariosAtivos.add(cHandler.nome);
+				}
 				t.start();
+				
 
 				i++;
 			}
@@ -40,11 +45,12 @@ public class Main {
 	}
 
 	public static void clienteBroadcast() throws IOException {
-		for (ClientHandler cliente : clientesConectados) {
-			cliente.objOuts.writeObject(usuariosAtivos);
-		}
-		
-		
+		synchronized (clientesConectados) {
+			for (ClientHandler cliente : clientesConectados) {
+				cliente.objOuts.writeObject(usuariosAtivos);
+				//cliente.objOuts.reset();		
+			}
+		}	
 	}
 }
 
@@ -65,42 +71,45 @@ class ClientHandler implements Runnable {
 	public void run() {
 
 		String mensagem;
-		while (true) {
+		while (!this.cliente.isClosed()) {
 			try {
 				if (!this.cliente.isClosed()) {
 					Main.clienteBroadcast();
-
-					for (ClientHandler cliente : Main.clientesConectados) {
-						
-						System.out.println(cliente);
-					}
 					
 					Object recebido = objIns.readObject();
 					if (recebido instanceof String) {
 						mensagem = (String) recebido;
 						System.out.println(mensagem);
 					}
+					else {
+						throw new SocketException();
+					}
 				}
 			} catch (EOFException | SocketException e) {
-				System.out.println("Usuário desconectado: " + this.nome);
-				Main.clientesConectados.remove(this);
-				Main.usuariosAtivos.remove(this.nome);
 				try {
-					Main.clienteBroadcast();
-				} catch (IOException e1) {
-					e1.printStackTrace();
+					objIns.close();
+					objOuts.close();
+					this.cliente.close();
+					System.out.println("Usuário desconectado: " + this.nome);
+					Main.clientesConectados.remove(this);
+					Main.usuariosAtivos.remove(this.nome);
+					try {
+						Main.clienteBroadcast();
+						System.out.println("Teste");
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+				} catch (IOException e2) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
+				
 			} catch (ClassNotFoundException ex) {
 				System.out.println("Tipo de objeto não esperado");
 			} catch (IOException ex) {
 				ex.printStackTrace();
 			} finally {
-				try {
-					this.cliente.close();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				
 			}
 		}
 	}
