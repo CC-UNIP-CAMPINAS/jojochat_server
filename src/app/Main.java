@@ -6,7 +6,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.ArrayList;
 import java.util.Vector;
 
 import entities.Connection;
@@ -48,7 +47,7 @@ public class Main {
 		synchronized (clientesConectados) {
 			for (ClientHandler cliente : clientesConectados) {
 				cliente.objOuts.writeObject(usuariosAtivos);
-				//cliente.objOuts.reset();		
+				cliente.objOuts.reset();		
 			}
 		}	
 	}
@@ -100,7 +99,6 @@ class ClientHandler implements Runnable {
 						e1.printStackTrace();
 					}
 				} catch (IOException e2) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				
@@ -108,8 +106,6 @@ class ClientHandler implements Runnable {
 				System.out.println("Tipo de objeto não esperado");
 			} catch (IOException ex) {
 				ex.printStackTrace();
-			} finally {
-				
 			}
 		}
 	}
