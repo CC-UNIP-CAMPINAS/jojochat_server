@@ -7,65 +7,87 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Vector;
 
 import entities.Connection;
 
-public class Main extends Thread {
-	public Socket conexao;
-	public static ArrayList<Socket> conexoes = new ArrayList<>();
-	public static ArrayList<String> clientesConectados = new ArrayList<>();
+public class Main {
+	public static Vector<ClientHandler> clientesConectados = new Vector<>();
+	static ArrayList<String> usuariosAtivos = new ArrayList<>();
 
-	public Main(Socket aConexao) {
-		this.conexao = aConexao;
-
-	}
+	static int i = 0;
 
 	public static void main(String[] args) throws IOException {
 		try (Connection servidor = new Connection(12345)) {
-			boolean fechamento = true;
 
-			while (fechamento) {
+			while (true) {
 				Socket cliente = servidor.getConnection();
-				Thread t = new Main(cliente);
+
+				ObjectInputStream objIns = new ObjectInputStream(cliente.getInputStream());
+				ObjectOutputStream objOuts = new ObjectOutputStream(cliente.getOutputStream());
+
+				ClientHandler cHandler = new ClientHandler(cliente, "cliente " + i, objIns, objOuts);
+				Thread t = new Thread(cHandler);
+				clientesConectados.add(cHandler);
+				usuariosAtivos.add(cHandler.nome);
 				t.start();
-				conexoes.add(cliente);
+
+				i++;
 			}
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
 		}
 	}
-
-	public void run() {
-		try (ObjectInputStream objIns = new ObjectInputStream(conexao.getInputStream());
-				ObjectOutputStream objOut = new ObjectOutputStream(conexao.getOutputStream())) {
-
-			for (Socket socket : conexoes) {
-				clientesConectados.add(socket.toString());
-			}
-			objOut.writeObject(clientesConectados);
-
-			String mensagem = null;
-			while (true) {
-				mensagem = (String) objIns.readObject();
-				objOut.writeObject(clientesConectados);
-				System.out.println(mensagem);
-			}
-
-		} catch (EOFException | SocketException e) {
-			System.out.println("Usuário saiu: " + conexao.toString());
-			conexoes.remove(conexao);
-
-			for (Socket socket : conexoes) {
-				clientesConectados.add(socket.toString());
-			}
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+	public static void clienteBroadcast() throws IOException {
+		for (ClientHandler cliente : clientesConectados) {
+			cliente.objOuts.writeObject(usuariosAtivos);
 		}
 	}
 }
+
+class ClientHandler implements Runnable {
+	String nome;
+	final ObjectInputStream objIns;
+	final ObjectOutputStream objOuts;
+	Socket cliente;
+
+	public ClientHandler(Socket cliente, String nome, ObjectInputStream objIns, ObjectOutputStream objOuts) {
+		this.objIns = objIns;
+		this.objOuts = objOuts;
+		this.nome = nome;
+		this.cliente = cliente;
+	}
+
+	@Override
+	public void run() {
+		
+		String mensagem;
+		while (true) {
+			try {
+				if (!this.cliente.isClosed()) {
+					Main.clienteBroadcast();
+
+					Object recebido = objIns.readObject();
+					if (recebido instanceof String) {
+					mensagem = (String) recebido;
+					System.out.println(mensagem);
+					}
+				}
+			} catch (EOFException | SocketException e) {
+				System.out.println("Usuário desconectado: " + this.nome);
+			} catch (ClassNotFoundException ex) {
+				System.out.println("Tipo de objeto não esperado");
+			} catch (IOException ex) {
+				ex.printStackTrace();
+			} finally {
+				try {
+					this.cliente.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+}
+	
