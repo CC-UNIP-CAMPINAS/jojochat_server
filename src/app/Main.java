@@ -1,4 +1,4 @@
-package src.app;
+package app;
 
 import java.io.EOFException;
 import java.io.IOException;
