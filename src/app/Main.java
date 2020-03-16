@@ -30,9 +30,7 @@ public class Main {
 				synchronized (clientesConectados) {
 					clientesConectados.add(cHandler);
 				}
-				synchronized (usuariosAtivos) {
-					usuariosAtivos.add(cHandler.nome);
-				}
+
 				t.start();
 				
 
@@ -44,12 +42,20 @@ public class Main {
 	}
 
 	public static void clienteBroadcast() throws IOException {
-		synchronized (clientesConectados) {
-			for (ClientHandler cliente : clientesConectados) {
-				cliente.objOuts.writeObject(usuariosAtivos);
-				cliente.objOuts.reset();		
-			}
+		for (ClientHandler cliente : clientesConectados) {
+			cliente.objOuts.writeObject(usuariosAtivos);
+			cliente.objOuts.reset();		
 		}	
+	}
+
+	public static boolean verificaLogin(String username) {
+		for (String cliente : usuariosAtivos) {
+			if (username.equals(cliente)) return false;
+		}
+		synchronized (usuariosAtivos) {
+			usuariosAtivos.add(username);
+		}
+		return true;
 	}
 }
 
@@ -68,17 +74,24 @@ class ClientHandler implements Runnable {
 
 	@Override
 	public void run() {
+		Vector request;
+		String operacao;
 
-		String mensagem;
 		while (!this.cliente.isClosed()) {
 			try {
 				if (!this.cliente.isClosed()) {
-					Main.clienteBroadcast();
 					
 					Object recebido = objIns.readObject();
-					if (recebido instanceof String) {
-						mensagem = (String) recebido;
-						System.out.println(mensagem);
+					if (recebido instanceof Vector<?>) {
+						request = (Vector<?>) recebido;
+						operacao = (String) request.get(0);
+						switch (operacao){
+							case "login":
+								Boolean resultado = Main.verificaLogin((String) request.get(1));
+								this.nome = (String) request.get(1);
+								this.objOuts.writeObject(resultado);	
+						}
+						Main.clienteBroadcast();
 					}
 					else {
 						throw new SocketException();
@@ -94,7 +107,6 @@ class ClientHandler implements Runnable {
 					Main.usuariosAtivos.remove(this.nome);
 					try {
 						Main.clienteBroadcast();
-						System.out.println("Teste");
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}
