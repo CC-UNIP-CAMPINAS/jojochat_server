@@ -13,9 +13,6 @@ import entities.Connection;
 public class Main {
 	public static Vector<ClientHandler> clientesConectados = new Vector<>();
 	static Vector<String> usuariosAtivos = new Vector<>();
-
-	static int i = 0;
-
 	public static void main(String[] args) throws IOException {
 		try (Connection servidor = new Connection(12345)) {
 
@@ -25,16 +22,13 @@ public class Main {
 				ObjectInputStream objIns = new ObjectInputStream(cliente.getInputStream());
 				ObjectOutputStream objOuts = new ObjectOutputStream(cliente.getOutputStream());
 
-				ClientHandler cHandler = new ClientHandler(cliente, "cliente " + i, objIns, objOuts);
+				ClientHandler cHandler = new ClientHandler(cliente, objIns, objOuts);
 				Thread t = new Thread(cHandler);
 				synchronized (clientesConectados) {
 					clientesConectados.add(cHandler);
 				}
 
 				t.start();
-				
-
-				i++;
 			}
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
@@ -48,7 +42,7 @@ public class Main {
 		}	
 	}
 
-	public static boolean verificaLogin(String username) {
+	public static boolean verificaLogin(String username) throws IOException {
 		for (String cliente : usuariosAtivos) {
 			if (username.equals(cliente)) return false;
 		}
@@ -65,55 +59,47 @@ class ClientHandler implements Runnable {
 	final ObjectOutputStream objOuts;
 	Socket cliente;
 
-	public ClientHandler(Socket cliente, String nome, ObjectInputStream objIns, ObjectOutputStream objOuts) {
+	public ClientHandler(Socket cliente, ObjectInputStream objIns, ObjectOutputStream objOuts) {
 		this.objIns = objIns;
 		this.objOuts = objOuts;
-		this.nome = nome;
 		this.cliente = cliente;
 	}
 
 	@Override
 	public void run() {
-		Vector request;
+		Vector<?> request;
 		String operacao;
+		Boolean resultado = false;
 
-		while (!this.cliente.isClosed()) {
+		while (true) {
 			try {
-				if (!this.cliente.isClosed()) {
-					
+				if (!cliente.isClosed()) {	
 					Object recebido = objIns.readObject();
 					if (recebido instanceof Vector<?>) {
 						request = (Vector<?>) recebido;
 						operacao = (String) request.get(0);
 						switch (operacao){
 							case "login":
-								Boolean resultado = Main.verificaLogin((String) request.get(1));
+								resultado = Main.verificaLogin((String) request.get(1));
+								System.out.println("enviando " + resultado);
 								this.nome = (String) request.get(1);
 								this.objOuts.writeObject(resultado);	
 						}
-						Main.clienteBroadcast();
-					}
-					else {
-						throw new SocketException();
+						if (resultado) Main.clienteBroadcast();
 					}
 				}
 			} catch (EOFException | SocketException e) {
 				try {
-					objIns.close();
-					objOuts.close();
 					this.cliente.close();
 					System.out.println("Usuário desconectado: " + this.nome);
 					Main.clientesConectados.remove(this);
 					Main.usuariosAtivos.remove(this.nome);
-					try {
-						Main.clienteBroadcast();
-					} catch (IOException e1) {
-						e1.printStackTrace();
-					}
-				} catch (IOException e2) {
-					e.printStackTrace();
+					Main.clienteBroadcast();
+					System.out.println(e.getMessage());
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
 				}
-				
 			} catch (ClassNotFoundException ex) {
 				System.out.println("Tipo de objeto não esperado");
 			} catch (IOException ex) {
