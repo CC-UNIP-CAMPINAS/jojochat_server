@@ -37,6 +37,8 @@ public class Main {
 
 	public static void clienteBroadcast() throws IOException {
 		for (ClientHandler cliente : clientesConectados) {
+			cliente.objOuts.writeObject("broadcast");
+			cliente.objOuts.reset();		
 			cliente.objOuts.writeObject(usuariosAtivos);
 			cliente.objOuts.reset();		
 		}	
@@ -69,6 +71,8 @@ class ClientHandler implements Runnable {
 	public void run() {
 		Vector<?> request;
 		String operacao;
+		String mensagem;
+		String usuarioDaMensagem;
 		Boolean resultado = false;
 
 		while (true) {
@@ -84,8 +88,23 @@ class ClientHandler implements Runnable {
 								System.out.println("enviando " + resultado);
 								this.nome = (String) request.get(1);
 								this.objOuts.writeObject(resultado);	
+								this.objOuts.reset();
+								if (resultado) Main.clienteBroadcast();
+								break;
+							case "mensagem":
+								usuarioDaMensagem = (String) request.get(1);
+								mensagem = (String) request.get(2);
+								for (ClientHandler cliente : Main.clientesConectados) {
+									if(cliente.nome.equals(usuarioDaMensagem)) {
+										cliente.objOuts.writeObject("mensagem");
+										cliente.objOuts.reset();
+										cliente.objOuts.writeObject(mensagem);
+										cliente.objOuts.reset();
+									}
+								}
+								break;	
 						}
-						if (resultado) Main.clienteBroadcast();
+						
 					}
 				}
 			} catch (EOFException | SocketException e) {
