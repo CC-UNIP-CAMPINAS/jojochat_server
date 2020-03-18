@@ -37,9 +37,12 @@ public class Main {
 
 	public static void clienteBroadcast() throws IOException {
 		for (ClientHandler cliente : clientesConectados) {
-			cliente.objOuts.writeObject("broadcast");
-			cliente.objOuts.reset();		
-			cliente.objOuts.writeObject(usuariosAtivos);
+			
+			Vector<Object> vetorBroadcast = new Vector<>();
+			vetorBroadcast.add("broadcast");
+			vetorBroadcast.add(usuariosAtivos);
+					
+			cliente.objOuts.writeObject(vetorBroadcast);
 			cliente.objOuts.reset();		
 		}	
 	}
@@ -71,8 +74,7 @@ class ClientHandler implements Runnable {
 	public void run() {
 		Vector<?> request;
 		String operacao;
-		String mensagem;
-		String usuarioDaMensagem;
+		String destinatario;
 		Boolean resultado = false;
 
 		while (true) {
@@ -92,19 +94,15 @@ class ClientHandler implements Runnable {
 								if (resultado) Main.clienteBroadcast();
 								break;
 							case "mensagem":
-								usuarioDaMensagem = (String) request.get(1);
-								mensagem = (String) request.get(2);
+								destinatario = (String) request.get(1);
 								for (ClientHandler cliente : Main.clientesConectados) {
-									if(cliente.nome.equals(usuarioDaMensagem)) {
-										cliente.objOuts.writeObject("mensagem");
-										cliente.objOuts.reset();
-										cliente.objOuts.writeObject(mensagem);
+									if(cliente.nome.equals(destinatario)) {
+										cliente.objOuts.writeObject(request);
 										cliente.objOuts.reset();
 									}
 								}
 								break;	
 						}
-						
 					}
 				}
 			} catch (EOFException | SocketException e) {
@@ -116,7 +114,6 @@ class ClientHandler implements Runnable {
 					Main.clienteBroadcast();
 					System.out.println(e.getMessage());
 				} catch (IOException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 			} catch (ClassNotFoundException ex) {
