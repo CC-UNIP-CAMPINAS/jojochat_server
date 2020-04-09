@@ -6,16 +6,25 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.Vector;
 
-import entities.Connection;
+import javafx.css.PseudoClass;
+import model.dao.DaoLogin;
+import model.entities.Connection;
+import model.entities.Usuario;
+import utils.DbUtils;
 
 public class Main {
 	public static Vector<ClientHandler> clientesConectados = new Vector<>();
-	static Vector<String> usuariosAtivos = new Vector<>();
+	static Vector<Usuario> usuariosAtivos = new Vector<>();
+	public PreparedStatement ps = null;
+	public ResultSet rs = null;
+	
 	public static void main(String[] args) throws IOException {
 		try (Connection servidor = new Connection(12345)) {
-
+			
 			while (true) {
 				Socket cliente = servidor.getConnection();
 
@@ -47,19 +56,27 @@ public class Main {
 		}	
 	}
 
-	public static boolean verificaLogin(String username) throws IOException {
-		for (String cliente : usuariosAtivos) {
-			if (username.equals(cliente)) return false;
+	public static Vector<Object> verificaLogin(String username, String senha) throws IOException {
+		Vector<Object> resultado = DaoLogin.verificaLoginDataBase(username, senha);
+		if((Boolean) resultado.get(0)) {
+			for (Usuario usuario : usuariosAtivos) {
+				if (usuario.getUsuario().equals(username)) {
+					resultado.set(0, false);
+					System.out.println("enviando " + resultado);
+					return resultado;
+				}
+			}
+			synchronized (usuariosAtivos) {
+				usuariosAtivos.add(new Usuario((String) resultado.get(1), username));
+			}
 		}
-		synchronized (usuariosAtivos) {
-			usuariosAtivos.add(username);
-		}
-		return true;
+		System.out.println("enviando " + resultado);
+		return resultado;
 	}
 }
 
 class ClientHandler implements Runnable {
-	String nome;
+	Usuario usuario;
 	final ObjectInputStream objIns;
 	final ObjectOutputStream objOuts;
 	Socket cliente;
@@ -86,31 +103,32 @@ class ClientHandler implements Runnable {
 						operacao = (String) request.get(0);
 						switch (operacao){
 							case "login":
-								resultado = Main.verificaLogin((String) request.get(1));
-								System.out.println("enviando " + resultado);
-								this.nome = (String) request.get(1);
-								this.objOuts.writeObject(resultado);	
-								this.objOuts.reset();
-								if (resultado) Main.clienteBroadcast();
-								break;
-							case "mensagem":
-								destinatario = (String) request.get(1);
-								for (ClientHandler cliente : Main.clientesConectados) {
-									if(cliente.nome.equals(destinatario)) {
-										cliente.objOuts.writeObject(request);
-										cliente.objOuts.reset();
-									}
+								request = Main.verificaLogin((String) request.get(1), (String) request.get(2));
+								if((Boolean)request.get(0)) {
+									usuario = new Usuario((String) request.get(1), (String) request.get(2));
 								}
-								break;	
+								this.objOuts.writeObject(request);	
+								this.objOuts.reset();
+								if ((Boolean) request.get(0)) Main.clienteBroadcast();
+								break;
+//							case "mensagem":
+//								destinatario = (String) request.get(1);
+//								for (ClientHandler cliente : Main.clientesConectados) {
+//									if(cliente.nome.equals(destinatario)) {
+//										cliente.objOuts.writeObject(request);
+//										cliente.objOuts.reset();
+//									}
+//								}
+//								break;	
 						}
 					}
 				}
 			} catch (EOFException | SocketException e) {
 				try {
 					this.cliente.close();
-					System.out.println("Usuário desconectado: " + this.nome);
+					System.out.println("Usuário desconectado: " + this.usuario.getUsuario());
 					Main.clientesConectados.remove(this);
-					Main.usuariosAtivos.remove(this.nome);
+					Main.usuariosAtivos.remove(this.usuario);
 					Main.clienteBroadcast();
 					System.out.println(e.getMessage());
 				} catch (IOException e1) {

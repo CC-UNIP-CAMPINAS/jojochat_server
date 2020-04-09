@@ -1,4 +1,4 @@
-package entities;
+package model.entities;
 
 import java.io.IOException;
 import java.net.ServerSocket;
