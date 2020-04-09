@@ -10,11 +10,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.Vector;
 
-import javafx.css.PseudoClass;
 import model.dao.DaoLogin;
 import model.entities.Connection;
 import model.entities.Usuario;
-import utils.DbUtils;
 
 public class Main {
 	public static Vector<ClientHandler> clientesConectados = new Vector<>();
@@ -33,10 +31,6 @@ public class Main {
 
 				ClientHandler cHandler = new ClientHandler(cliente, objIns, objOuts);
 				Thread t = new Thread(cHandler);
-				synchronized (clientesConectados) {
-					clientesConectados.add(cHandler);
-				}
-
 				t.start();
 			}
 		} catch (Exception e) {
@@ -66,6 +60,7 @@ public class Main {
 					return resultado;
 				}
 			}
+			
 			synchronized (usuariosAtivos) {
 				usuariosAtivos.add(new Usuario((String) resultado.get(1), username));
 			}
@@ -91,8 +86,7 @@ class ClientHandler implements Runnable {
 	public void run() {
 		Vector<?> request;
 		String operacao;
-		String destinatario;
-		Boolean resultado = false;
+		Usuario destinatario;
 
 		while (true) {
 			try {
@@ -106,20 +100,23 @@ class ClientHandler implements Runnable {
 								request = Main.verificaLogin((String) request.get(1), (String) request.get(2));
 								if((Boolean)request.get(0)) {
 									usuario = new Usuario((String) request.get(1), (String) request.get(2));
+									synchronized (Main.clientesConectados) {
+										Main.clientesConectados.add(this);
+									}
 								}
 								this.objOuts.writeObject(request);	
 								this.objOuts.reset();
 								if ((Boolean) request.get(0)) Main.clienteBroadcast();
 								break;
-//							case "mensagem":
-//								destinatario = (String) request.get(1);
-//								for (ClientHandler cliente : Main.clientesConectados) {
-//									if(cliente.nome.equals(destinatario)) {
-//										cliente.objOuts.writeObject(request);
-//										cliente.objOuts.reset();
-//									}
-//								}
-//								break;	
+							case "mensagem":
+								destinatario = (Usuario) request.get(1);
+								for (ClientHandler cliente : Main.clientesConectados) {
+									if(cliente.usuario.equals(destinatario)) {
+										cliente.objOuts.writeObject(request);
+										cliente.objOuts.reset();
+									}
+								}
+								break;	
 						}
 					}
 				}
@@ -130,7 +127,6 @@ class ClientHandler implements Runnable {
 					Main.clientesConectados.remove(this);
 					Main.usuariosAtivos.remove(this.usuario);
 					Main.clienteBroadcast();
-					System.out.println(e.getMessage());
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
