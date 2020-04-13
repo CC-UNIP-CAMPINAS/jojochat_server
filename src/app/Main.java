@@ -8,8 +8,10 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.Vector;
 
+import model.dao.DaoConversa;
 import model.dao.DaoLogin;
 import model.entities.Connection;
+import model.entities.Mensagem;
 import model.entities.Usuario;
 
 public class Main {
@@ -61,7 +63,7 @@ public class Main {
 			}
 
 			synchronized (usuariosAtivos) {
-				usuariosAtivos.add(new Usuario((String) resultado.get(1), username));
+				usuariosAtivos.add((Usuario) resultado.get(1));
 			}
 		}
 		System.out.println("enviando " + resultado);
@@ -71,7 +73,7 @@ public class Main {
 	public static void realizaLogin(Vector<?> request, ClientHandler cliente) throws IOException {
 		request = Main.validaLogin((String) request.get(1), (String) request.get(2));
 		if ((Boolean) request.get(0)) {
-			cliente.usuario = new Usuario((String) request.get(1), (String) request.get(2));
+			cliente.usuario = (Usuario) request.get(1);
 			synchronized (Main.clientsConectados) {
 				Main.clientsConectados.add(cliente);
 			}
@@ -83,7 +85,11 @@ public class Main {
 	}
 
 	public static void repassaMensagem(Vector<?> request) throws IOException {
-		Usuario destinatario = (Usuario) request.get(1);
+		
+		Mensagem mensagem = (Mensagem) request.get(1);
+		DaoConversa.guardaMensagem(mensagem);
+		
+		Usuario destinatario = mensagem.getDestinatario();
 		for (ClientHandler cliente : Main.clientsConectados) {
 			if (cliente.usuario.equals(destinatario)) {
 				cliente.objOuts.writeObject(request);
