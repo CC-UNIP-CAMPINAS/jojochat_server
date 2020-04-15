@@ -97,6 +97,19 @@ public class Main {
 			}
 		}
 	}
+	
+	@SuppressWarnings("unchecked")
+	public static void repassaHistorico(Vector<?> request) throws IOException {
+		Usuario usuarioRequisitante = (Usuario) request.get(1);
+		request = DaoConversa.buscaHistorico((Vector<Object>) request);
+		
+		for (ClientHandler cliente : Main.clientsConectados) {
+			if (cliente.usuario.equals(usuarioRequisitante)) {
+				cliente.objOuts.writeObject(request);
+				cliente.objOuts.reset();
+			}
+		}	
+	}
 }
 //
 //#################Thread#################//
@@ -132,6 +145,10 @@ class ClientHandler implements Runnable {
 						case "mensagem":
 							Main.repassaMensagem(request);
 							break;
+							
+						case "historico":
+							Main.repassaHistorico(request);
+							break;	
 						}
 					}
 				}

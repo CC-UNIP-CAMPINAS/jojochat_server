@@ -3,40 +3,17 @@ package model.dao;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.Vector;
 
 import model.entities.Mensagem;
+import model.entities.Usuario;
 import utils.ConversorDataUtils;
 import utils.DbUtils;
 
 public class DaoConversa {
 	private static PreparedStatement st = null;
 	private static ResultSet rs = null;
-
-	public static Vector<Object> verificaLoginDataBase(String usuario, String senha) {
-		Vector<Object> results = new Vector<>();
-		try {	
-			st = DbUtils.getConnection().prepareStatement("select * from users where usuario = ? and senha = ?");
-			st.setString(1, usuario);
-			st.setString(2, senha);
-			rs = st.executeQuery();
-			while (rs.next()) {
-				results.add(true);
-				results.add(rs.getString("nome_de_exibicao"));
-				results.add(rs.getString("usuario"));
-				return results;
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-			
-		} finally {
-			DbUtils.closeConnection();
-			DbUtils.fechaResultSet(rs);
-			DbUtils.fechaStatement(st);
-		}
-		results.add(false);
-		return results;
-	}
 
 	public static void guardaMensagem(Mensagem mensagem) {
 		try {	
@@ -54,5 +31,47 @@ public class DaoConversa {
 			DbUtils.fechaResultSet(rs);
 			DbUtils.fechaStatement(st);
 		}	
+	}
+	
+	public static Vector<Object> buscaHistorico(Vector<Object> request) {
+		try {
+			Usuario remetente = (Usuario) request.get(1);
+			Usuario destinatario = (Usuario) request.get(2);
+			
+			st = DbUtils.getConnection().prepareStatement("select * from conversas where (destinatario = ? and remetente = ?) or (destinatario = ? and remetente = ?);");
+			st.setInt(1, destinatario.getId());
+			st.setInt(2, remetente.getId());
+			st.setInt(3, remetente.getId());
+			st.setInt(4, destinatario.getId());
+
+			rs = st.executeQuery();
+			Vector<Mensagem> conversa = new Vector<Mensagem>();
+			
+			
+			while(rs.next()) {
+				if(remetente.getId() != rs.getInt("remetente")) {
+					conversa.add(new Mensagem(rs.getString("mensagem"), destinatario, remetente, rs.getTimestamp("data").toLocalDateTime()));
+				}
+				else {
+					conversa.add(new Mensagem(rs.getString("mensagem"), remetente, destinatario, rs.getTimestamp("data").toLocalDateTime()));
+				}
+			}
+			Collections.sort(conversa);
+			
+			request.clear();
+			request.add("historico");
+			request.add(conversa);
+			
+			return request;
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			
+		} finally {
+			DbUtils.closeConnection();
+			DbUtils.fechaResultSet(rs);
+			DbUtils.fechaStatement(st);
+		}
+		return null;	
 	}
 }
