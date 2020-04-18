@@ -10,7 +10,9 @@ import java.util.Vector;
 
 import model.dao.DaoConversa;
 import model.dao.DaoLogin;
+import model.dao.DaoUser;
 import model.entities.Connection;
+import model.entities.Conversa;
 import model.entities.Mensagem;
 import model.entities.Usuario;
 
@@ -18,10 +20,11 @@ public class Main {
 	
 	public static Vector<ClientHandler> clientsConectados = new Vector<>();
 	static Vector<Usuario> usuariosAtivos = new Vector<>();
+	public static Vector<Usuario> usuariosRegistrados = new Vector<>();
 
 	public static void main(String[] args) throws IOException {
+		preencheUsuariosRegistrados();
 		try (Connection servidor = new Connection(12345)) {
-
 			while (true) {
 				Socket cliente = servidor.getConnection();
 
@@ -39,6 +42,10 @@ public class Main {
 	//
 	//#################Métodos para funcionamento do servidor#################//
 	//
+	public static void preencheUsuariosRegistrados() {
+		usuariosRegistrados = DaoUser.getUsuarios();
+	}
+	
 	public static void clienteBroadcast() throws IOException {
 		for (ClientHandler cliente : clientsConectados) {
 
@@ -87,7 +94,8 @@ public class Main {
 	public static void repassaMensagem(Vector<?> request) throws IOException {
 		
 		Mensagem mensagem = (Mensagem) request.get(1);
-		DaoConversa.guardaMensagem(mensagem);
+		Conversa conversa = (Conversa) request.get(2);
+		DaoConversa.guardaMensagem(mensagem, conversa);
 		
 		Usuario destinatario = mensagem.getDestinatario();
 		for (ClientHandler cliente : Main.clientsConectados) {
@@ -109,6 +117,18 @@ public class Main {
 				cliente.objOuts.reset();
 			}
 		}	
+	}
+	@SuppressWarnings("unchecked")
+	public static void repassaConversas(Vector<?> request) throws IOException {
+		Usuario usuarioRequisitante = (Usuario) request.get(1);
+		request = DaoConversa.buscaConversas((Vector<Object>) request);
+		
+		for (ClientHandler cliente : Main.clientsConectados) {
+			if (cliente.usuario.equals(usuarioRequisitante)) {
+				cliente.objOuts.writeObject(request);
+				cliente.objOuts.reset();
+			}
+		}		
 	}
 }
 //
@@ -145,10 +165,12 @@ class ClientHandler implements Runnable {
 						case "mensagem":
 							Main.repassaMensagem(request);
 							break;
-							
 						case "historico":
 							Main.repassaHistorico(request);
-							break;	
+							break;
+						case "conversas":
+							Main.repassaConversas(request);
+							break;
 						}
 					}
 				}
