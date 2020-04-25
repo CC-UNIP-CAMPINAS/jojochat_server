@@ -1,6 +1,7 @@
 package app;
 
 import java.io.EOFException;
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -15,6 +16,8 @@ import model.entities.Connection;
 import model.entities.Conversa;
 import model.entities.Mensagem;
 import model.entities.Usuario;
+import model.entities.enumerados.TiposMensagens;
+import utils.FileUtils;
 
 public class Main {
 	
@@ -91,19 +94,31 @@ public class Main {
 			Main.clienteBroadcast();
 	}
 
-	public static void repassaMensagem(Vector<?> request) throws IOException {
-		
+	@SuppressWarnings("unchecked")
+	public static void repassaMensagem(Vector<?> request, TiposMensagens opcao) throws IOException {
 		Mensagem mensagem = (Mensagem) request.get(1);
 		Conversa conversa = (Conversa) request.get(2);
-		DaoConversa.guardaMensagem(mensagem, conversa);
-		
 		Usuario destinatario = mensagem.getDestinatario();
+		Vector<Object> requisicaoSemBytes = (Vector<Object>)request;
+		if(opcao.equals(TiposMensagens.S0_MENSAGEM)) {
+			DaoConversa.guardaMensagem(mensagem, conversa);
+		}
+		
+		if(opcao.equals(TiposMensagens.MENSAGEM_COM_ARQUIVO)) {
+			String caminhoServidor = FileUtils.getCaminhoArquivos()+File.separatorChar+String.valueOf(mensagem.getRemetente().getId()+":"+mensagem.getDestinatario().getId());
+			caminhoServidor = FileUtils.gravaArquivo(mensagem.getArquivo(), caminhoServidor);
+			mensagem.getArquivo().setLocalizacaoServidor(new File(caminhoServidor));
+			DaoConversa.guardaMensagemComArquivo(mensagem, conversa, caminhoServidor, mensagem.getArquivo().getLocalizacaoRemetente().toString());
+			mensagem.getArquivo().setConteudo(null);
+			requisicaoSemBytes.set(1, mensagem);
+		}
+		
 		for (ClientHandler cliente : Main.clientsConectados) {
 			if (cliente.usuario.equals(destinatario)) {
-				cliente.objOuts.writeObject(request);
+				cliente.objOuts.writeObject(requisicaoSemBytes);
 				cliente.objOuts.reset();
 			}
-		}
+		}	
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -163,7 +178,10 @@ class ClientHandler implements Runnable {
 							Main.realizaLogin(request, this);
 							break;
 						case "mensagem":
-							Main.repassaMensagem(request);
+							Main.repassaMensagem(request, TiposMensagens.S0_MENSAGEM);
+							break;
+						case "mensagemComArquivo":
+							Main.repassaMensagem(request, TiposMensagens.MENSAGEM_COM_ARQUIVO);
 							break;
 						case "historico":
 							Main.repassaHistorico(request);
