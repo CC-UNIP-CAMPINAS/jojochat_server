@@ -12,9 +12,9 @@ import java.util.Properties;
 
 public class DbUtils {
 
-public static Connection conn = null;
 	
 	public static Connection getConnection(){
+		Connection conn = null;
 		if(conn == null) {
 				Properties props = loadProperties();
 				String url = props.getProperty("dburl");
@@ -27,7 +27,7 @@ public static Connection conn = null;
 		return conn;
 	}
 	
-	public static void closeConnection() {
+	public static void closeConnection(Connection conn) {
 		if(conn != null) {
 			try {
 				conn.close();

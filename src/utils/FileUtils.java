@@ -48,6 +48,23 @@ public class FileUtils {
         return destino;
 	}
 	
+	public static String gravaImagemPerfil(byte[] arquivo, String nome, String destino) throws IOException{
+		criaDiretorio(destino);
+		if(arquivo == null) {
+			nome = "icons8-male-user-60.png";
+			destino += File.separatorChar+nome;
+			System.out.println("Entrou");
+		}
+		else {
+			System.out.println("Entrou2");
+			destino += File.separatorChar+nome;
+		    FileOutputStream fos = new FileOutputStream(destino);
+	        fos.write(arquivo);
+	        fos.close();
+		}
+        return destino;
+	}
+	
 	public static byte[] fileToBytes(File arquivo) throws IOException {
 		FileInputStream fis;
         try {
@@ -88,5 +105,12 @@ public class FileUtils {
 			 return System.getProperty("user.home")+File.separatorChar+"Documents"+File.separatorChar+"JOJO_DATA"+ File.separatorChar+"Arquivos";
 		}
 		return System.getProperty("user.home")+File.separatorChar+"Documents"+File.separatorChar+"JOJO_DATA"+ File.separatorChar+"Arquivos";
+	}
+	
+	public static String getCaminhoImagensPerfil(){
+		if (IdentificadorSoUtils.sistema().equals("linux")){
+			 return System.getProperty("user.home")+File.separatorChar+"Documents"+File.separatorChar+"JOJO_DATA"+ File.separatorChar+"users_data";
+		}
+		return System.getProperty("user.home")+File.separatorChar+"Documents"+File.separatorChar+"JOJO_DATA"+ File.separatorChar+"users_data";
 	}
 }

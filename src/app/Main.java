@@ -14,6 +14,7 @@ import model.dao.DaoLogin;
 import model.dao.DaoUser;
 import model.entities.Connection;
 import model.entities.Conversa;
+import model.entities.FormularioCadastro;
 import model.entities.Mensagem;
 import model.entities.Usuario;
 import model.entities.enumerados.TiposMensagens;
@@ -92,6 +93,18 @@ public class Main {
 		cliente.objOuts.reset();
 		if ((Boolean) request.get(0))
 			Main.clienteBroadcast();
+	}
+	
+	public static void realizaCadastro(Vector<?> request, ClientHandler cliente) throws IOException {
+		FormularioCadastro novoUsuario = (FormularioCadastro) request.get(1);
+		
+		request.clear();
+		request = DaoLogin.criaCadastro(novoUsuario);
+		
+		cliente.objOuts.writeObject(request);
+		cliente.objOuts.reset();	
+		
+		preencheUsuariosRegistrados();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -176,6 +189,9 @@ class ClientHandler implements Runnable {
 						switch (operacao) {
 						case "login":
 							Main.realizaLogin(request, this);
+							break;
+						case "cadastro":
+							Main.realizaCadastro(request, this);
 							break;
 						case "mensagem":
 							Main.repassaMensagem(request, TiposMensagens.S0_MENSAGEM);

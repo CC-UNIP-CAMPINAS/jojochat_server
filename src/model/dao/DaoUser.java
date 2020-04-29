@@ -1,5 +1,6 @@
 package model.dao;
 
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -9,13 +10,14 @@ import model.entities.Usuario;
 import utils.DbUtils;
 
 public class DaoUser {
-	private static PreparedStatement st = null;
-	private static ResultSet rs = null;
 
 	public static Vector<Usuario> getUsuarios() {
 		Vector<Usuario> usuariosRegistrados = new Vector<>();
+		PreparedStatement st = null;
+		ResultSet rs = null;
+		Connection conn = DbUtils.getConnection();
 		try {	
-			st = DbUtils.getConnection().prepareStatement("select * from users");
+			st = conn.prepareStatement("select * from users");
 			rs = st.executeQuery();
 			while (rs.next()) {
 				Usuario user = new Usuario(rs.getInt("id"), rs.getString("nome_de_exibicao"), rs.getString("usuario"));
@@ -26,7 +28,7 @@ public class DaoUser {
 			e.printStackTrace();
 			
 		} finally {
-			DbUtils.closeConnection();
+			DbUtils.closeConnection(conn);
 			DbUtils.fechaResultSet(rs);
 			DbUtils.fechaStatement(st);
 		}
