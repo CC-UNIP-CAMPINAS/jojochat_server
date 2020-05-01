@@ -10,107 +10,100 @@ import java.text.DecimalFormat;
 import model.entities.Arquivo;
 
 public class FileUtils {
-	
+
 	public static String conversorDeUnidade(File arquivo) {
 		DecimalFormat df = new DecimalFormat("#.00");
-		if(arquivo.length() <= 1024) {
+		if (arquivo.length() <= 1024) {
 			String resultado = String.valueOf(arquivo.length());
-			return resultado+"B";
+			return resultado + "B";
 		}
-		if(arquivo.length() > 1024 && arquivo.length() <= 1048576) {
-			double calculo = (arquivo.length()/1024.0);
+		if (arquivo.length() > 1024 && arquivo.length() <= 1048576) {
+			double calculo = (arquivo.length() / 1024.0);
 			String resultado = String.valueOf(df.format(calculo));
-			return resultado+"kB";
+			return resultado + "kB";
 		}
-		if(arquivo.length() > 1048576) {
-			double calculo = (arquivo.length()/1048576.0);
+		if (arquivo.length() > 1048576) {
+			double calculo = (arquivo.length() / 1048576.0);
 			String resultado = String.valueOf(df.format(calculo));
-			return resultado+"MB";
+			return resultado + "MB";
 		}
 		return null;
 	}
-	
+
 	public static boolean isImg(File arquivo) {
-		if(arquivo.getName().contains(".png") || arquivo.getName().contains(".jpg")) {
+		if (arquivo.getName().contains(".png") || arquivo.getName().contains(".jpg")) {
 			return true;
-		}
-		else {
+		} else {
 			return false;
 		}
 	}
-	
-	public static String gravaArquivo(Arquivo arquivo, String destino) throws IOException{
+
+	public static String gravaArquivo(Arquivo arquivo, String destino) throws IOException {
 		criaDiretorio(destino);
-	    destino += File.separatorChar+arquivo.getLocalizacaoRemetente().getName();
-	    FileOutputStream fos = new FileOutputStream(destino);
-        fos.write(arquivo.getConteudo());
-        fos.close();
-        return destino;
+		destino += File.separatorChar + arquivo.getLocalizacaoRemetente().getName();
+		FileOutputStream fos = new FileOutputStream(destino);
+		fos.write(arquivo.getConteudo());
+		fos.close();
+		return destino;
 	}
-	
-	public static String gravaImagemPerfil(byte[] arquivo, String nome, String destino) throws IOException{
+
+	public static String gravaImagemPerfil(byte[] arquivo, String nome, String destino) throws IOException {
 		criaDiretorio(destino);
-		if(arquivo == null) {
-			nome = "icons8-male-user-60.png";
-			destino += File.separatorChar+nome;
-			System.out.println("Entrou");
-		}
-		else {
-			System.out.println("Entrou2");
-			destino += File.separatorChar+nome;
-		    FileOutputStream fos = new FileOutputStream(destino);
-	        fos.write(arquivo);
-	        fos.close();
-		}
-        return destino;
+		destino += File.separatorChar + nome;
+		FileOutputStream fos = new FileOutputStream(destino);
+		fos.write(arquivo);
+		fos.close();
+		return destino;
 	}
-	
+
 	public static byte[] fileToBytes(File arquivo) throws IOException {
 		FileInputStream fis;
-        try {
-        	byte[] bFile = new byte[(int) arquivo.length()];
+		try {
+			byte[] bFile = new byte[(int) arquivo.length()];
 			fis = new FileInputStream(arquivo);
 			fis.read(bFile);
-	        fis.close();
-	        return bFile;
+			fis.close();
+			return bFile;
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return null;
 	}
-	
+
 	public static boolean criaDiretorio(String caminho) {
 		File diretorio = new File(caminho);
-		if(!diretorio.exists()) {
+		if (!diretorio.exists()) {
 			diretorio.mkdirs();
 			return false;
-		}
-		else {
+		} else {
 			return true;
 		}
 	}
-	
+
 	public static boolean verificaArquivo(File arquivo) {
-		if(arquivo.exists()) {
+		if (arquivo.exists()) {
 			return true;
-		}
-		else {
+		} else {
 			return false;
 		}
 	}
-	
-	public static String getCaminhoArquivos(){
-		if (IdentificadorSoUtils.sistema().equals("linux")){
-			 return System.getProperty("user.home")+File.separatorChar+"Documents"+File.separatorChar+"JOJO_DATA"+ File.separatorChar+"Arquivos";
+
+	public static String getCaminhoArquivos() {
+		if (IdentificadorSoUtils.sistema().equals("linux")) {
+			return System.getProperty("user.home") + File.separatorChar + "Documents" + File.separatorChar + "JOJO_DATA"
+					+ File.separatorChar + "Arquivos";
 		}
-		return System.getProperty("user.home")+File.separatorChar+"Documents"+File.separatorChar+"JOJO_DATA"+ File.separatorChar+"Arquivos";
+		return System.getProperty("user.home") + File.separatorChar + "Documents" + File.separatorChar + "JOJO_DATA"
+				+ File.separatorChar + "Arquivos";
 	}
-	
-	public static String getCaminhoImagensPerfil(){
-		if (IdentificadorSoUtils.sistema().equals("linux")){
-			 return System.getProperty("user.home")+File.separatorChar+"Documents"+File.separatorChar+"JOJO_DATA"+ File.separatorChar+"users_data";
+
+	public static String getCaminhoImagensPerfil() {
+		if (IdentificadorSoUtils.sistema().equals("linux")) {
+			return System.getProperty("user.home") + File.separatorChar + "Documents" + File.separatorChar + "JOJO_DATA"
+					+ File.separatorChar + "users_data";
 		}
-		return System.getProperty("user.home")+File.separatorChar+"Documents"+File.separatorChar+"JOJO_DATA"+ File.separatorChar+"users_data";
+		return System.getProperty("user.home") + File.separatorChar + "Documents" + File.separatorChar + "JOJO_DATA"
+				+ File.separatorChar + "users_data";
 	}
 }

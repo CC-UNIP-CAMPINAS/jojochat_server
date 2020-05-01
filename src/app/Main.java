@@ -46,7 +46,7 @@ public class Main {
 	//
 	//#################Métodos para funcionamento do servidor#################//
 	//
-	public static void preencheUsuariosRegistrados() {
+	public static void preencheUsuariosRegistrados() throws IOException {
 		usuariosRegistrados = DaoUser.getUsuarios();
 	}
 	

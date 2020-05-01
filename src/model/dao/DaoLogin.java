@@ -1,5 +1,6 @@
 package model.dao;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -14,26 +15,26 @@ import utils.DbUtils;
 import utils.FileUtils;
 
 public class DaoLogin {
-	
-	public static Vector<Object> verificaLoginDataBase(String usuario, String senha) {
+
+	public static Vector<Object> verificaLoginDataBase(String usuario, String senha) throws IOException {
 		Vector<Object> results = new Vector<>();
 		PreparedStatement st = null;
 		ResultSet rs = null;
 		Connection conn = DbUtils.getConnection();
-		try {	
+		try {
 			st = conn.prepareStatement("select * from users where usuario = ? and senha = ?");
 			st.setString(1, usuario);
 			st.setString(2, senha);
 			rs = st.executeQuery();
 			while (rs.next()) {
 				results.add(true);
-				Usuario user = new Usuario(rs.getInt("id"), rs.getString("nome_de_exibicao"), rs.getString("usuario"));
+				Usuario user = new Usuario(rs.getInt("id"), rs.getString("nome_de_exibicao"), rs.getString("usuario"), FileUtils.fileToBytes(new File(rs.getString("img_profile"))));
 				results.add(user);
 				return results;
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
-			
+
 		} finally {
 			DbUtils.closeConnection(conn);
 			DbUtils.fechaResultSet(rs);
@@ -45,27 +46,32 @@ public class DaoLogin {
 
 	public static Vector<Object> criaCadastro(FormularioCadastro novoUsuario) throws IOException {
 		for (Usuario users : Main.usuariosRegistrados) {
-			if(users.getUsuario().equals(novoUsuario.getLogin())) {
+			if (users.getUsuario().equals(novoUsuario.getLogin())) {
 				Vector<Object> resposta = new Vector<Object>();
 				resposta.add(Boolean.FALSE);
-				System.out.println("retorno falso");
 				return resposta;
 			}
 		}
 		PreparedStatement st = null;
 		Connection conn = DbUtils.getConnection();
-		try {	
-			System.out.println("retorno true");
-			st = conn.prepareStatement("INSERT INTO users (usuario, senha, nome_de_exibicao, img_profile) VALUES (?, ?, ?, ?);");
+		try {
+			st = conn.prepareStatement(
+					"INSERT INTO users (usuario, senha, nome_de_exibicao, img_profile) VALUES (?, ?, ?, ?);");
 			st.setString(1, novoUsuario.getLogin());
 			st.setString(2, novoUsuario.getSenha());
 			st.setString(3, novoUsuario.getNomeUsuario());
-			st.setString(4, FileUtils.gravaImagemPerfil(novoUsuario.getImgPerfil(), novoUsuario.getNomeArquivo().getName(), FileUtils.getCaminhoImagensPerfil()));
+
+			if (novoUsuario.getImgPerfil() == null) {
+				st.setString(4, FileUtils.getCaminhoImagensPerfil() + File.separator + "default_profile.png");
+			} else {
+				st.setString(4, FileUtils.gravaImagemPerfil(novoUsuario.getImgPerfil(),
+						novoUsuario.getNomeArquivo().getName(), FileUtils.getCaminhoImagensPerfil()));
+			}
 			st.execute();
-			
+
 		} catch (SQLException e) {
 			e.printStackTrace();
-			
+
 		} finally {
 			DbUtils.closeConnection(conn);
 			DbUtils.fechaStatement(st);
