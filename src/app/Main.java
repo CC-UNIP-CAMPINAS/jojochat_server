@@ -158,6 +158,15 @@ public class Main {
 			}
 		}		
 	}
+	public static void repassaArquivo(Vector<?> request, ClientHandler solicitante) throws IOException {
+		Mensagem mensagem = (Mensagem) request.get(1);
+		mensagem.getArquivo().setConteudo(FileUtils.fileToBytes(mensagem.getArquivo().getLocalizacaoServidor()));
+		Vector<Object> resposta = new Vector<Object>();
+		resposta.add("arquivo");
+		resposta.add(mensagem);
+		solicitante.objOuts.writeObject(resposta);
+		solicitante.objOuts.reset();
+	}
 }
 //
 //#################Thread#################//
@@ -204,6 +213,9 @@ class ClientHandler implements Runnable {
 							break;
 						case "conversas":
 							Main.repassaConversas(request);
+							break;
+						case "arquivo":
+							Main.repassaArquivo(request, this);
 							break;
 						}
 					}
